@@ -38,10 +38,16 @@ DIST_GPU_RUNNER_LIB_DEPS = $(addprefix $(DIST_GPU_RUNNER_DEPS_DIR)/,$(notdir $(G
 GPU_RUNNER_SRCS := \
 	$(filter-out $(wildcard ggml-cuda/fattn*.cu),$(wildcard ggml-cuda/*.cu)) \
 	$(wildcard ggml-cuda/template-instances/mmq*.cu) \
-	ggml.c ggml-backend.cpp ggml-alloc.c ggml-quants.c sgemm.cpp ggml-aarch64.c ggml-cpu.c ggml-cpu-quants.c ggml-cpu-aarch64.c ggml-cpu.cpp ggml-threading.cpp
-GPU_RUNNER_HDRS := \
-	$(wildcard ggml-cuda/*.cuh)
-
+	../ml/backend/ggml/ggml/ggml.c \
+	../ml/backend/ggml/ggml/ggml-backend.cpp \
+	../ml/backend/ggml/ggml/ggml-alloc.c \
+	../ml/backend/ggml/ggml/ggml-quants.c \
+	../ml/backend/ggml/ggml/ggml-aarch64.c \
+	../ml/backend/ggml/ggml/ggml-threading.cpp \
+	../ml/backend/ggml/ggml/ggml-cpu/ggml-cpu.c \
+	../ml/backend/ggml/ggml/ggml-cpu/ggml-cpu-quants.c \
+	../ml/backend/ggml/ggml/ggml-cpu/ggml-cpu-aarch64.c \
+	../ml/backend/ggml/ggml/ggml-cpu/ggml-cpu.cpp \
 
 # Conditional flags and components to speed up developer builds
 ifneq ($(OLLAMA_FAST_BUILD),)
