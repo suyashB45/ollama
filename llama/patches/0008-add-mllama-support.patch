@@ -71,7 +71,7 @@ index e85f459f..aba85f86 100644
      LLAMA_API void llama_free(struct llama_context * ctx);
  
 diff --git a/src/llama.cpp b/src/llama.cpp
-index fee4b3aa..6ab8b45f 100644
+index b01770d0..46881642 100644
 --- a/src/llama.cpp
 +++ b/src/llama.cpp
 @@ -146,6 +146,7 @@ static std::string format(const char * fmt, ...) {
