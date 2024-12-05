@@ -440,20 +440,21 @@ static const std::map<llm_kv, const char *> LLM_KV_NAMES = {
     { LLM_KV_RESIDUAL_SCALE,                    "%s.residual_scale"                    },
     { LLM_KV_EMBEDDING_SCALE,                   "%s.embedding_scale"                   },
 
-    { LLM_KV_ATTENTION_HEAD_COUNT,             "%s.attention.head_count"             },
-    { LLM_KV_ATTENTION_HEAD_COUNT_KV,          "%s.attention.head_count_kv"          },
-    { LLM_KV_ATTENTION_MAX_ALIBI_BIAS,         "%s.attention.max_alibi_bias"         },
-    { LLM_KV_ATTENTION_CLAMP_KQV,              "%s.attention.clamp_kqv"              },
-    { LLM_KV_ATTENTION_KEY_LENGTH,             "%s.attention.key_length"             },
-    { LLM_KV_ATTENTION_VALUE_LENGTH,           "%s.attention.value_length"           },
-    { LLM_KV_ATTENTION_LAYERNORM_EPS,          "%s.attention.layer_norm_epsilon"     },
-    { LLM_KV_ATTENTION_LAYERNORM_RMS_EPS,      "%s.attention.layer_norm_rms_epsilon" },
-    { LLM_KV_ATTENTION_CAUSAL,                 "%s.attention.causal"                 },
-    { LLM_KV_ATTENTION_Q_LORA_RANK,            "%s.attention.q_lora_rank"            },
-    { LLM_KV_ATTENTION_KV_LORA_RANK,           "%s.attention.kv_lora_rank"           },
-    { LLM_KV_ATTENTION_RELATIVE_BUCKETS_COUNT, "%s.attention.relative_buckets_count" },
-    { LLM_KV_ATTENTION_SLIDING_WINDOW,         "%s.attention.sliding_window"         },
-    { LLM_KV_ATTENTION_SCALE,                  "%s.attention.scale"                  },
+    { LLM_KV_ATTENTION_HEAD_COUNT,             "%s.attention.head_count"               },
+    { LLM_KV_ATTENTION_HEAD_COUNT_KV,          "%s.attention.head_count_kv"            },
+    { LLM_KV_ATTENTION_MAX_ALIBI_BIAS,         "%s.attention.max_alibi_bias"           },
+    { LLM_KV_ATTENTION_CLAMP_KQV,              "%s.attention.clamp_kqv"                },
+    { LLM_KV_ATTENTION_KEY_LENGTH,             "%s.attention.key_length"               },
+    { LLM_KV_ATTENTION_VALUE_LENGTH,           "%s.attention.value_length"             },
+    { LLM_KV_ATTENTION_LAYERNORM_EPS,          "%s.attention.layer_norm_epsilon"       },
+    { LLM_KV_ATTENTION_LAYERNORM_RMS_EPS,      "%s.attention.layer_norm_rms_epsilon"   },
+    { LLM_KV_ATTENTION_CAUSAL,                 "%s.attention.causal"                   },
+    { LLM_KV_ATTENTION_Q_LORA_RANK,            "%s.attention.q_lora_rank"              },
+    { LLM_KV_ATTENTION_KV_LORA_RANK,           "%s.attention.kv_lora_rank"             },
+    { LLM_KV_ATTENTION_RELATIVE_BUCKETS_COUNT, "%s.attention.relative_buckets_count"   },
+    { LLM_KV_ATTENTION_SLIDING_WINDOW,         "%s.attention.sliding_window"           },
+    { LLM_KV_ATTENTION_SCALE,                  "%s.attention.scale"                    },
+    { LLM_KV_ATTENTION_BLOCK_SKIP_CONNECTION,  "%s.attention.block_skip_connection.%d" },
     { LLM_KV_ATTENTION_CROSS_ATTENTION_LAYERS, "%s.attention.cross_attention_layers"   },
 
     { LLM_KV_ROPE_DIMENSION_COUNT,             "%s.rope.dimension_count"                 },
@@ -18394,7 +18395,6 @@ static int llama_decode_internal(
                     break;
                 }
             }
-            GGML_ASSERT(embd != nullptr && "missing embeddings tensor");
         } else {
             embd = nullptr; // do not extract embeddings when not needed
             GGML_ASSERT(strcmp(res->name, "result_output") == 0 && "missing result_output tensor");

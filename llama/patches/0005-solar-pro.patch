@@ -11,11 +11,11 @@ tensor to store the scalar. the scalar is implemented a 1-dimensional
 tensor with 2 elements dervied from the model's bskcn_tv configuration.
 in general, the values are (bskcn_tv, 1 - bskcn_tv)
 ---
- src/llama.cpp | 238 ++++++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 238 insertions(+)
+ src/llama.cpp | 267 +++++++++++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 253 insertions(+), 14 deletions(-)
 
 diff --git a/src/llama.cpp b/src/llama.cpp
-index 47a28147..48aa6beb 100644
+index d1791af0..fee4b3aa 100644
 --- a/src/llama.cpp
 +++ b/src/llama.cpp
 @@ -195,6 +195,7 @@ enum llm_arch {
@@ -42,7 +42,43 @@ index 47a28147..48aa6beb 100644
  
      LLM_KV_ROPE_DIMENSION_COUNT,
      LLM_KV_ROPE_FREQ_BASE,
-@@ -603,6 +606,7 @@ enum llm_tensor {
+@@ -408,20 +411,21 @@ static const std::map<llm_kv, const char *> LLM_KV_NAMES = {
+     { LLM_KV_RESIDUAL_SCALE,                    "%s.residual_scale"                    },
+     { LLM_KV_EMBEDDING_SCALE,                   "%s.embedding_scale"                   },
+ 
+-    { LLM_KV_ATTENTION_HEAD_COUNT,             "%s.attention.head_count"             },
+-    { LLM_KV_ATTENTION_HEAD_COUNT_KV,          "%s.attention.head_count_kv"          },
+-    { LLM_KV_ATTENTION_MAX_ALIBI_BIAS,         "%s.attention.max_alibi_bias"         },
+-    { LLM_KV_ATTENTION_CLAMP_KQV,              "%s.attention.clamp_kqv"              },
+-    { LLM_KV_ATTENTION_KEY_LENGTH,             "%s.attention.key_length"             },
+-    { LLM_KV_ATTENTION_VALUE_LENGTH,           "%s.attention.value_length"           },
+-    { LLM_KV_ATTENTION_LAYERNORM_EPS,          "%s.attention.layer_norm_epsilon"     },
+-    { LLM_KV_ATTENTION_LAYERNORM_RMS_EPS,      "%s.attention.layer_norm_rms_epsilon" },
+-    { LLM_KV_ATTENTION_CAUSAL,                 "%s.attention.causal"                 },
+-    { LLM_KV_ATTENTION_Q_LORA_RANK,            "%s.attention.q_lora_rank"            },
+-    { LLM_KV_ATTENTION_KV_LORA_RANK,           "%s.attention.kv_lora_rank"           },
+-    { LLM_KV_ATTENTION_RELATIVE_BUCKETS_COUNT, "%s.attention.relative_buckets_count" },
+-    { LLM_KV_ATTENTION_SLIDING_WINDOW,         "%s.attention.sliding_window"         },
+-    { LLM_KV_ATTENTION_SCALE,                  "%s.attention.scale"                  },
++    { LLM_KV_ATTENTION_HEAD_COUNT,             "%s.attention.head_count"               },
++    { LLM_KV_ATTENTION_HEAD_COUNT_KV,          "%s.attention.head_count_kv"            },
++    { LLM_KV_ATTENTION_MAX_ALIBI_BIAS,         "%s.attention.max_alibi_bias"           },
++    { LLM_KV_ATTENTION_CLAMP_KQV,              "%s.attention.clamp_kqv"                },
++    { LLM_KV_ATTENTION_KEY_LENGTH,             "%s.attention.key_length"               },
++    { LLM_KV_ATTENTION_VALUE_LENGTH,           "%s.attention.value_length"             },
++    { LLM_KV_ATTENTION_LAYERNORM_EPS,          "%s.attention.layer_norm_epsilon"       },
++    { LLM_KV_ATTENTION_LAYERNORM_RMS_EPS,      "%s.attention.layer_norm_rms_epsilon"   },
++    { LLM_KV_ATTENTION_CAUSAL,                 "%s.attention.causal"                   },
++    { LLM_KV_ATTENTION_Q_LORA_RANK,            "%s.attention.q_lora_rank"              },
++    { LLM_KV_ATTENTION_KV_LORA_RANK,           "%s.attention.kv_lora_rank"             },
++    { LLM_KV_ATTENTION_RELATIVE_BUCKETS_COUNT, "%s.attention.relative_buckets_count"   },
++    { LLM_KV_ATTENTION_SLIDING_WINDOW,         "%s.attention.sliding_window"           },
++    { LLM_KV_ATTENTION_SCALE,                  "%s.attention.scale"                    },
++    { LLM_KV_ATTENTION_BLOCK_SKIP_CONNECTION,  "%s.attention.block_skip_connection.%d" },
+ 
+     { LLM_KV_ROPE_DIMENSION_COUNT,             "%s.rope.dimension_count"                 },
+     { LLM_KV_ROPE_FREQ_BASE,                   "%s.rope.freq_base"                       },
+@@ -603,6 +607,7 @@ enum llm_tensor {
      LLM_TENSOR_ENC_OUTPUT_NORM,
      LLM_TENSOR_CLS,
      LLM_TENSOR_CLS_OUT,
@@ -50,7 +86,7 @@ index 47a28147..48aa6beb 100644
  };
  
  static const std::map<llm_arch, std::map<llm_tensor, const char *>> LLM_TENSOR_NAMES = {
-@@ -1541,6 +1545,24 @@ static const std::map<llm_arch, std::map<llm_tensor, const char *>> LLM_TENSOR_N
+@@ -1541,6 +1546,24 @@ static const std::map<llm_arch, std::map<llm_tensor, const char *>> LLM_TENSOR_N
              { LLM_TENSOR_ATTN_K_NORM,     "blk.%d.attn_k_norm" },
          },
      },
@@ -75,7 +111,7 @@ index 47a28147..48aa6beb 100644
      {
          LLM_ARCH_UNKNOWN,
          {
-@@ -2401,6 +2423,7 @@ enum e_model {
+@@ -2401,6 +2424,7 @@ enum e_model {
      MODEL_15B,
      MODEL_16B,
      MODEL_20B,
@@ -83,7 +119,7 @@ index 47a28147..48aa6beb 100644
      MODEL_30B,
      MODEL_32B,
      MODEL_34B,
-@@ -2451,6 +2474,8 @@ struct llama_hparams {
+@@ -2451,6 +2475,8 @@ struct llama_hparams {
      std::array<uint32_t, LLAMA_MAX_LAYERS> n_head_kv_arr;
      std::array<uint32_t, LLAMA_MAX_LAYERS> n_ff_arr;
  
@@ -92,7 +128,7 @@ index 47a28147..48aa6beb 100644
      uint32_t n_layer_dense_lead = 0;
      uint32_t n_lora_q = 0;
      uint32_t n_lora_kv = 0;
-@@ -2521,6 +2546,7 @@ struct llama_hparams {
+@@ -2521,6 +2547,7 @@ struct llama_hparams {
          if (this->n_head_arr    != other.n_head_arr)    return true;
          if (this->n_head_kv_arr != other.n_head_kv_arr) return true;
          if (this->n_ff_arr      != other.n_ff_arr)      return true;
@@ -100,7 +136,7 @@ index 47a28147..48aa6beb 100644
  
          if (this->n_rel_attn_bkts    != other.n_rel_attn_bkts)    return true;
          if (this->n_layer_dense_lead != other.n_layer_dense_lead) return true;
-@@ -2630,6 +2656,14 @@ struct llama_hparams {
+@@ -2630,6 +2657,14 @@ struct llama_hparams {
              return ssm_d_state * ssm_d_inner;
          }
      }
@@ -115,7 +151,7 @@ index 47a28147..48aa6beb 100644
  };
  
  static_assert(std::is_trivially_copyable<llama_hparams>::value, "llama_hparams must be trivially copyable");
-@@ -2816,6 +2850,8 @@ struct llama_layer {
+@@ -2816,6 +2851,8 @@ struct llama_layer {
      struct ggml_tensor * ffn_gate_scale;
      struct ggml_tensor * ffn_up_scale;
      struct ggml_tensor * ffn_down_scale;
@@ -124,7 +160,7 @@ index 47a28147..48aa6beb 100644
  };
  
  // very similar to llama_batch,
-@@ -6209,6 +6245,21 @@ static void llm_load_hparams(
+@@ -6209,6 +6246,21 @@ static void llm_load_hparams(
                      default: model.type = e_model::MODEL_UNKNOWN;
                 }
              } break;
@@ -146,7 +182,7 @@ index 47a28147..48aa6beb 100644
          default: (void)0;
      }
  
-@@ -7198,6 +7249,7 @@ static const std::map<llm_tensor, llm_tensor_info> llm_tensor_info_mapping = {
+@@ -7198,6 +7250,7 @@ static const std::map<llm_tensor, llm_tensor_info> llm_tensor_info_mapping = {
      {LLM_TENSOR_FFN_UP_EXPS,                {LLM_TENSOR_LAYER_REPEATING, GGML_OP_MUL_MAT_ID}},
      // this tensor is loaded for T5, but never used
      {LLM_TENSOR_DEC_CROSS_ATTN_REL_B,       {LLM_TENSOR_LAYER_REPEATING, GGML_OP_NONE}},
@@ -154,7 +190,7 @@ index 47a28147..48aa6beb 100644
  };
  
  // checks if the weight tensor can be used with the specified buffer type and device
-@@ -9205,6 +9257,35 @@ static bool llm_load_tensors(
+@@ -9205,6 +9258,35 @@ static bool llm_load_tensors(
  
                          layer.ffn_norm = create_tensor(tn(LLM_TENSOR_FFN_NORM, "weight", i), {n_embd}, 0);
  
@@ -190,7 +226,7 @@ index 47a28147..48aa6beb 100644
                          layer.ffn_gate = create_tensor(tn(LLM_TENSOR_FFN_GATE, "weight", i), {n_embd,   n_ff}, 0);
                          layer.ffn_down = create_tensor(tn(LLM_TENSOR_FFN_DOWN, "weight", i), {  n_ff, n_embd}, 0);
                          layer.ffn_up   = create_tensor(tn(LLM_TENSOR_FFN_UP,   "weight", i), {n_embd,   n_ff}, 0);
-@@ -16652,6 +16733,158 @@ struct llm_build_context {
+@@ -16652,6 +16734,158 @@ struct llm_build_context {
  
          return gf;
      }
@@ -349,7 +385,7 @@ index 47a28147..48aa6beb 100644
  };
  
  static struct ggml_cgraph * llama_build_graph_defrag(llama_context & lctx, const std::vector<uint32_t> & ids) {
-@@ -16921,6 +17154,10 @@ static struct ggml_cgraph * llama_build_graph(
+@@ -16921,6 +17155,10 @@ static struct ggml_cgraph * llama_build_graph(
              {
                  result = llm.build_chameleon();
              } break;
@@ -360,7 +396,7 @@ index 47a28147..48aa6beb 100644
          default:
              GGML_ABORT("fatal error");
      }
-@@ -20133,6 +20370,7 @@ enum llama_rope_type llama_rope_type(const struct llama_model * model) {
+@@ -20132,6 +20370,7 @@ enum llama_rope_type llama_rope_type(const struct llama_model * model) {
          case LLM_ARCH_GRANITE:
          case LLM_ARCH_GRANITE_MOE:
          case LLM_ARCH_CHAMELEON:
